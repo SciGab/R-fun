@@ -1,6 +1,6 @@
 ### --------------------------------------------------------------------- ###
 ### --------------- Helper functions for correlations  ------------------ ###
-### ----------------------- Version: 10.06.2021 ------------------------- ###
+### ----------------------- Version: 18.06.2021 ------------------------- ###
 ### -------------------------- Gabriela Hofer --------------------------- ###
 ### --------------------------------------------------------------------- ###
 
@@ -18,7 +18,7 @@ get_rsig <- function(p, n) {
   
   # return correlation that would become sig. at desired p-level
   return(rsig)
-
+  
 }
 
 #### 2. function for bootstrapping of (a lot of) correlations ------------------
@@ -35,7 +35,7 @@ if (!require(wBoot)) {
 #' @bootsamples The number of bootstrap samples
 #' @seed A seed for random number generation to obtain reproducible results    
 
-boot_cor_df <- function(xynames_df, data, bootsamples = 2000, seed = 214035) {
+boot_cor_df <- function(xynames_df, data, bootsamples = 2000, seed = 214035, type) {
   
   # set seed
   set.seed(seed)
@@ -59,9 +59,15 @@ boot_cor_df <- function(xynames_df, data, bootsamples = 2000, seed = 214035) {
     x                          <- corrs$x[i]
     y                          <- corrs$y[i]
     
-    # ... compute percentile bootstrapping with desired number of bootsamples
-    bootinfo                   <- boot.cor.per(data[[x]], data[[y]], R = bootsamples, null.hyp = 0, 
-                                               alternative = "two.sided", type = "two-sided")
+    if (type == "perc") {
+      # ... compute percentile bootstrapping with desired number of bootsamples
+      bootinfo                 <- boot.cor.per(data[[x]], data[[y]], R = bootsamples, null.hyp = 0, 
+                                               alternative = "two.sided", type = "two-sided") 
+    } else if (type == "bca") {
+      # ... compute bca bootstrapping with desired number of bootsamples
+      bootinfo                 <- boot.cor.bca(data[[x]], data[[y]], R = bootsamples, null.hyp = 0, 
+                                               alternative = "two.sided", type = "two-sided") 
+    }
     
     # save relevant statistics into boot dataframe
     corrs$Observed_r[i]        <- bootinfo$Observed
@@ -70,9 +76,9 @@ boot_cor_df <- function(xynames_df, data, bootsamples = 2000, seed = 214035) {
     corrs$Perc_CI_lower[i]     <- bootinfo$Confidence.limits[1]
     corrs$Perc_CI_upper[i]     <- bootinfo$Confidence.limits[2]
   }
-
-# return table with results    
-return(corrs)
+  
+  # return table with results    
+  return(corrs)
   
 }
 
@@ -83,7 +89,7 @@ cor_df <- function(xynames_df, data) {
   names(xynames_df)   <- c("x", "y", "r")
   sample_corrs        <- xynames_df
   sample_corrs$r      <- as.numeric(sample_corrs$r)
-
+  
   # calculate correlations and include in df
   for (i in 1:nrow(sample_corrs)){
     x                 <- sample_corrs$x[i]
@@ -91,10 +97,9 @@ cor_df <- function(xynames_df, data) {
     data              <- data_whole %>% select(all_of(x), all_of(y)) # all_of to tell dplyr that x and y don't come from data_whole
     sample_corrs$r[i] <- cor(data)[2, 1]
   }
-
-# return table with results    
-return(sample_corrs)  
+  
+  # return table with results    
+  return(sample_corrs)  
   
 }
-
 
