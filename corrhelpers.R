@@ -86,22 +86,34 @@ boot_cor_df <- function(xynames_df, data, bootsamples = 2000, seed = 214035, typ
 
 cor_df <- function(xynames_df, data) {
   
-  # add 1 empty column for results
-  corrs  <- data.frame(cbind(xynames_df, rep(NA, nrow(xynames_df))))
+  # add 4 empty columns for results
+  corrs  <- data.frame(cbind(xynames_df, 
+                             rep(NA, nrow(xynames_df)),
+                             rep(NA, nrow(xynames_df)),
+                             rep(NA, nrow(xynames_df)),
+                             rep(NA, nrow(xynames_df))))
   
-  names(corrs)   <- c("x", "y", "r")
-  corrs$r      <- as.numeric(corrs$r)
+  # name columns of results dataframe
+  names(corrs) <- c("x", "y", "r", "p", "Perc_CI_lower", "Perc_CI_upper")
   
-  # calculate correlations and include in df
+  corrs <- corrs %>%
+    mutate(across(r:Perc_CI_upper, ~as.numeric(.))) 
+  
+  # for each desired combination of variables (x and y)...
   for (i in 1:nrow(corrs)){
-    x                 <- corrs$x[i]
-    y                 <- corrs$y[i]
-    data              <- data %>% select(all_of(x), all_of(y)) # all_of to tell dplyr that x and y don't come from data_whole
-    corrs$r[i] <- cor(data)[2, 1]
+    x                          <- corrs$x[i]
+    y                          <- corrs$y[i]
+    
+    corrinfo <- cor.test(data[[x]], data[[y]])
+    
+    # save relevant statistics into boot dataframe
+    corrs$r[i]                 <- corrinfo$estimate
+    corrs$p[i]                 <- corrinfo$p.value
+    corrs$Perc_CI_lower[i]     <- corrinfo$conf.int[1]
+    corrs$Perc_CI_upper[i]     <- corrinfo$conf.int[2]
   }
   
   # return table with results    
-  return(corrs)  
+  return(corrs)
   
 }
-
