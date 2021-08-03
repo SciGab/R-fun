@@ -1,6 +1,6 @@
 ### --------------------------------------------------------------------- ###
 ### --------------- Helper functions for correlations  ------------------ ###
-### ----------------------- Version: 18.06.2021 ------------------------- ###
+### ----------------------- Version: 03.08.2021 ------------------------- ###
 ### -------------------------- Gabriela Hofer --------------------------- ###
 ### --------------------------------------------------------------------- ###
 
@@ -86,20 +86,22 @@ boot_cor_df <- function(xynames_df, data, bootsamples = 2000, seed = 214035, typ
 
 cor_df <- function(xynames_df, data) {
   
-  names(xynames_df)   <- c("x", "y", "r")
-  sample_corrs        <- xynames_df
-  sample_corrs$r      <- as.numeric(sample_corrs$r)
+  # add 1 empty column for results
+  corrs  <- data.frame(cbind(xynames_df, rep(NA, nrow(xynames_df))))
+  
+  names(corrs)   <- c("x", "y", "r")
+  corrs$r      <- as.numeric(corrs$r)
   
   # calculate correlations and include in df
-  for (i in 1:nrow(sample_corrs)){
-    x                 <- sample_corrs$x[i]
-    y                 <- sample_corrs$y[i]
-    data              <- data_whole %>% select(all_of(x), all_of(y)) # all_of to tell dplyr that x and y don't come from data_whole
-    sample_corrs$r[i] <- cor(data)[2, 1]
+  for (i in 1:nrow(corrs)){
+    x                 <- corrs$x[i]
+    y                 <- corrs$y[i]
+    data              <- data %>% select(all_of(x), all_of(y)) # all_of to tell dplyr that x and y don't come from data_whole
+    corrs$r[i] <- cor(data)[2, 1]
   }
   
   # return table with results    
-  return(sample_corrs)  
+  return(corrs)  
   
 }
 
