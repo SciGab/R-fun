@@ -1,6 +1,6 @@
 ### --------------------------------------------------------------------- ###
 ### --------------- Helper functions for correlations  ------------------ ###
-### ----------------------- Version: 03.08.2021 ------------------------- ###
+### ----------------------- Version: 18.01.2022 ------------------------- ###
 ### -------------------------- Gabriela Hofer --------------------------- ###
 ### --------------------------------------------------------------------- ###
 
@@ -34,6 +34,8 @@ if (!require(wBoot)) {
 #' @data A dataframe containing the data the correlation are to be based on
 #' @bootsamples The number of bootstrap samples
 #' @seed A seed for random number generation to obtain reproducible results    
+
+# 2.a. two-sided confidence intervals ------------------------------------------
 
 boot_cor_df <- function(xynames_df, data, bootsamples = 2000, seed = 214035, type) {
   
@@ -82,6 +84,53 @@ boot_cor_df <- function(xynames_df, data, bootsamples = 2000, seed = 214035, typ
   
 }
 
+# 2.b one-sided confidence intervals (hyp: corr > 0) ---------------------------
+
+boot_cor_df_ones <- function(xynames_df, data, bootsamples = 2000, seed = 214035, type) {
+  
+  # set seed
+  set.seed(seed)
+  
+  # add 4 empty columns for results
+  corrs  <- data.frame(cbind(xynames_df, 
+                             rep(NA, nrow(xynames_df)),
+                             rep(NA, nrow(xynames_df)),
+                             rep(NA, nrow(xynames_df)),
+                             rep(NA, nrow(xynames_df))))
+  
+  # name columns of results dataframe
+  names(corrs) <- c("x", "y", "Observed_r", "Mean_boot_r", "p", "Perc_CI_lower")
+  
+  corrs <- corrs %>%
+    mutate(across(Observed_r:Perc_CI_lower, ~as.numeric(.))) 
+  
+  # for each desired combination of variables (x and y)...
+  for (i in 1:nrow(corrs)){
+    x                          <- corrs$x[i]
+    y                          <- corrs$y[i]
+    
+    if (type == "perc") {
+      # ... compute percentile bootstrapping with desired number of bootsamples
+      bootinfo                 <- boot.cor.per(data[[x]], data[[y]], R = bootsamples, null.hyp = 0, 
+                                               alternative = "greater", type = "lower-bound") 
+    } else if (type == "bca") {
+      # ... compute bca bootstrapping with desired number of bootsamples
+      bootinfo                 <- boot.cor.bca(data[[x]], data[[y]], R = bootsamples, null.hyp = 0, 
+                                               alternative = "greater", type = "lower-bound") 
+    }
+    
+    # save relevant statistics into boot dataframe
+    corrs$Observed_r[i]        <- bootinfo$Observed
+    corrs$Mean_boot_r[i]       <- bootinfo$Mean
+    corrs$p[i]                 <- bootinfo$p.value
+    corrs$Perc_CI_lower[i]     <- bootinfo$Confidence.limits[1]
+  }
+  
+  # return table with results    
+  return(corrs)
+  
+}
+
 #### 3. function to compute several "regular" correlations ---------------------
 
 cor_df <- function(xynames_df, data) {
@@ -117,3 +166,5 @@ cor_df <- function(xynames_df, data) {
   return(corrs)
   
 }
+
+
